@@ -28,10 +28,12 @@ app.get("/", async (req, res) => {
 // "/users" にフォームからデータが送信された時の処理
 app.post("/users", async (req, res) => {
   const name = req.body.name; // フォームから送信された名前を取得
+  const age = req.body.age ? Number(req.body.age) : null; // 年齢を取得し、数値に変換。空ならnull。
+
   if (name) {
-    // 新しいユーザーをデータベースに作成
+    // nameが空でないことだけ確認
     const newUser = await prisma.user.create({
-      data: { name },
+      data: { name, age }, // 年齢も保存
     });
     console.log("新しいユーザーを追加しました:", newUser);
   }
