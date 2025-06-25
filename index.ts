@@ -1,39 +1,44 @@
-// 生成した Prisma Client を './generated/prisma/client' からインポート
+import express from "express";
+// 生成した Prisma Client をインポート
 import { PrismaClient } from "./generated/prisma/client";
 const prisma = new PrismaClient({
-  // 実行されたクエリをログに表示する設定
+  // クエリが実行されたときに実際に実行したクエリをログに表示する設定
   log: ["query"],
 });
+const app = express();
 
-async function main() {
-  // Prisma Client の初期化を知らせる
-  console.log("Prisma Client を初期化しました。");
+// 環境変数が設定されていれば、そこからポート番号を取得する。環境変数に設定がなければ 8888 を使用する。
+const PORT = process.env.PORT || 8888;
 
-  // 最初にユーザーの一覧を取得して表示
-  let users_before = await prisma.user.findMany();
-  console.log("Before ユーザー一覧:", users_before);
+// EJS をテンプレートエンジンとして設定
+app.set("view engine", "ejs");
+app.set("views", "./views");
 
-  // 新しいユーザーを一人追加する
-  const newUser = await prisma.user.create({
-    data: {
-      name: `新しいユーザー ${new Date().toISOString()}`,
-    },
-  });
-  console.log("新しいユーザーを追加しました:", newUser);
+// form のデータを受け取れるように設定
+app.use(express.urlencoded({ extended: true }));
 
-  // もう一度ユーザーの一覧を取得して表示
-  const users_after = await prisma.user.findMany();
-  console.log("After ユーザー一覧:", users_after);
-}
+// ルートURL ("/") にアクセスがあった時の処理
+app.get("/", async (req, res) => {
+  // データベースから全ユーザーを取得
+  const users = await prisma.user.findMany();
+  // 'index.ejs' というビューにユーザー一覧のデータを渡して表示
+  res.render("index", { users });
+});
 
-// main 関数を実行し、終わったら後片付けをする
-main()
-  .catch((e) => {
-    console.error(e);
-    process.exit(1);
-  })
-  .finally(async () => {
-    // 最後にデータベースとの接続を切る
-    await prisma.$disconnect();
-    console.log("Prisma Client を切断しました。");
-  });
+// "/users" にフォームからデータが送信された時の処理
+app.post("/users", async (req, res) => {
+  const name = req.body.name; // フォームから送信された名前を取得
+  if (name) {
+    // 新しいユーザーをデータベースに作成
+    const newUser = await prisma.user.create({
+      data: { name },
+    });
+    console.log("新しいユーザーを追加しました:", newUser);
+  }
+  res.redirect("/"); // ユーザー追加後、一覧ページにリダイレクト
+});
+
+// サーバーを起動
+app.listen(PORT, () => {
+  console.log(`Server is running on http://localhost:${PORT}`);
+});
